@@ -77,20 +77,49 @@ function nextId() {
   }, 0) + 1;
 }
 
-/* Add a note from the form */
+/* Add a note from the form, after validating the text */
 noteForm.addEventListener("submit", function (event) {
   event.preventDefault();
 
-  const text = noteInput.value.trim();
-  const category = noteCategory.value;
+  const rawText = noteInput.value;
+  const text = rawText.trim();
+
+  // an empty note, or one made only of spaces
+  if (text.length === 0) {
+    errorMessage.textContent = "Please type a note first.";
+    return;
+  }
+
+  // a note that is too long
+  if (rawText.length > 200) {
+    errorMessage.textContent = "Notes must be 200 characters or fewer.";
+    return;
+  }
+
+  errorMessage.textContent = "";
 
   notes.push({
     id: nextId(),
     text: text,
-    category: category,
+    category: noteCategory.value,
     createdAt: new Date().toLocaleString()
   });
 
   noteInput.value = "";
+  render();
+});
+
+/* Each Delete button removes its own note */
+notesList.addEventListener("click", function (event) {
+  const button = event.target.closest(".delete-btn");
+  if (!button) {
+    return;
+  }
+
+  const id = Number(button.dataset.id);
+  notes = notes.filter(function (note) {
+    return note.id !== id;
+  });
+
   render();
 });
