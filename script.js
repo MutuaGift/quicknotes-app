@@ -2,16 +2,47 @@
    QuickNotes - application script
    ============================================ */
 
+const STORAGE_KEY = "quicknotes-notes";
+
 /* Select the elements we need */
 const noteForm = document.querySelector("#note-form");
 const noteInput = document.querySelector("#note-input");
 const noteCategory = document.querySelector("#note-category");
 const errorMessage = document.querySelector("#error-message");
+const searchInput = document.querySelector("#search-input");
 const notesList = document.querySelector("#notes-list");
 const noteCount = document.querySelector("#note-count");
+const clearAllBtn = document.querySelector("#clear-all-btn");
 
 /* Every note is an object: id, text, category, createdAt */
 let notes = [];
+
+/* ---------- storage ---------- */
+
+/* Save the notes array as JSON */
+function saveNotes() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
+
+/* Load the notes array back from JSON */
+function loadNotes() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed)) {
+      notes = parsed;
+    }
+  } catch (error) {
+    // unreadable data in storage: start from an empty list
+    notes = [];
+  }
+}
+
+/* ---------- rendering ---------- */
 
 /* Build one note card. Uses createElement and textContent only, so note
    text is never treated as markup. */
@@ -48,15 +79,21 @@ function createNoteCard(note) {
   return item;
 }
 
-/* Rebuild the whole list from the notes array */
-function render() {
-  notesList.replaceChildren();
+/* Notes that match the current search box, ignoring case.
+   Every search word has to appear in the note. */
+function getVisibleNotes() {
+  const query = searchInput.value.trim().toLowerCase();
+  if (query === "") {
+    return notes;
+  }
 
-  notes.forEach(function (note) {
-    notesList.appendChild(createNoteCard(note));
+  const words = query.split(/\s+/);
+  return notes.filter(function (note) {
+    const haystack = note.text.toLowerCase();
+    return words.every(function (word) {
+      return haystack.includes(word);
+    });
   });
-
-  updateCount();
 }
 
 /* Keep the count paragraph in step with the notes */
@@ -70,12 +107,35 @@ function updateCount() {
   }
 }
 
+/* Rebuild the whole list from the notes array */
+function render() {
+  notesList.replaceChildren();
+
+  const visible = getVisibleNotes();
+  const searching = searchInput.value.trim() !== "";
+
+  if (searching && visible.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty-message";
+    empty.textContent = "No notes match your search.";
+    notesList.appendChild(empty);
+  } else {
+    visible.forEach(function (note) {
+      notesList.appendChild(createNoteCard(note));
+    });
+  }
+
+  updateCount();
+}
+
 /* Work out the next free id */
 function nextId() {
   return notes.reduce(function (max, note) {
     return Math.max(max, note.id);
   }, 0) + 1;
 }
+
+/* ---------- events ---------- */
 
 /* Add a note from the form, after validating the text */
 noteForm.addEventListener("submit", function (event) {
@@ -107,6 +167,7 @@ noteForm.addEventListener("submit", function (event) {
 
   noteInput.value = "";
   render();
+  saveNotes();
 });
 
 /* Each Delete button removes its own note */
@@ -122,4 +183,24 @@ notesList.addEventListener("click", function (event) {
   });
 
   render();
+  saveNotes();
 });
+
+/* Search as the user types */
+searchInput.addEventListener("input", render);
+
+/* Clear every note, after asking for confirmation */
+clearAllBtn.addEventListener("click", function () {
+  if (!confirm("Delete all notes?")) {
+    return;
+  }
+
+  notes = [];
+  searchInput.value = "";
+  render();
+  saveNotes();
+});
+
+/* On page load: restore the notes, then draw them */
+loadNotes();
+render();

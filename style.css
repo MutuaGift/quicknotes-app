@@ -155,8 +155,18 @@ button:hover {
   font-weight: 600;
 }
 
+/* Toolbar holding the count and the Clear all button */
+.notes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 #note-count {
-  margin: 0 0 0.75rem;
+  margin: 0;
   color: #616e7c;
   font-size: 0.95rem;
 }
@@ -277,5 +287,10 @@ footer {
   #add-btn,
   #clear-all-btn {
     width: 100%;
+  }
+
+  .notes-toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
